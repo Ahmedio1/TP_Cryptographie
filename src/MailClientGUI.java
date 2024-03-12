@@ -12,7 +12,6 @@ public class MailClientGUI {
     private JTextArea textAreaMessage;
     private JButton sendButton;
     private JButton buttonFile;
-    private JFileChooser areaFileChoose;
     private JLabel attachmentsLabel;
     private ArrayList<String> namefile;
 
