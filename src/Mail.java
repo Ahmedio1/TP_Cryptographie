@@ -1,7 +1,10 @@
-public class Mail {
-    String description, piecejointe,destinataire,expediteur,objet;
+import java.io.File;
 
-    public Mail(String description, String piecejointe, String destinataire, String expediteur, String objet) {
+public class Mail {
+    String description,destinataire,expediteur,objet;
+    File piecejointe;
+
+    public Mail(String description, File piecejointe, String destinataire, String expediteur, String objet) {
         this.description = description;
         this.piecejointe = piecejointe;
         this.destinataire = destinataire;

@@ -20,7 +20,7 @@ public class MainMenu {
     }
 
     private static void placeComponents(JPanel panel) {
-        panel.setLayout(null);
+        panel.setLayout(new FlowLayout(FlowLayout.CENTER));
 
         // Création du bouton pour envoyer un mail
         JButton sendMailButton = new JButton("Envoyer un Mail");
@@ -35,7 +35,7 @@ public class MainMenu {
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
-                        new MailClientGUI(); // Assurez-vous que MailClientGUI est conçu pour s'afficher lui-même
+                        new MailClientGUI();
                     }
                 });
             }
@@ -52,12 +52,11 @@ public class MainMenu {
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
-                        new InboxGUI(); // Assurez-vous que InboxGUI est conçu pour s'afficher lui-même
+                        new InboxGUI();
                     }
                 });
             }
         });
-
         panel.add(inboxButton);
     }
 }
