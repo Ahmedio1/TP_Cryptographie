@@ -23,10 +23,16 @@ public class InboxGUI {
     private Folder emailFolder;
     private JPanel attachmentPanel; // Panel pour afficher les pièces jointes
 
-    public InboxGUI() {
+    private String userEmail;
+    private String userPassword;
+
+    public InboxGUI(String email, String password) {
+        this.userEmail = email;
+        this.userPassword = password;
         initializeUI();
         fetchMails();
     }
+
 
     private void initializeUI() {
         frame = new JFrame("Boîte de Réception");
@@ -45,9 +51,22 @@ public class InboxGUI {
         pane.add(new JScrollPane(mailContent), BorderLayout.CENTER);
 
         // Panel pour afficher les pièces jointes
-        attachmentPanel = new JPanel();
-        attachmentPanel.setLayout(new FlowLayout());
+        attachmentPanel = new JPanel(new FlowLayout());
         pane.add(attachmentPanel, BorderLayout.SOUTH);
+
+        // Panel pour le bouton de retour
+        JPanel backButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton backButton = new JButton("Retour");
+        backButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                frame.dispose(); // Fermer la fenêtre actuelle
+                new MainMenu(userEmail, userPassword); // Réouvrir le MainMenu
+            }
+        });
+        backButtonPanel.add(backButton);
+
+        pane.add(backButtonPanel, BorderLayout.NORTH);
 
         listMails.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent evt) {
@@ -74,7 +93,7 @@ public class InboxGUI {
         try {
             Session emailSession = Session.getInstance(props);
             store = emailSession.getStore("imaps");
-            store.connect("outlook.office365.com", "tp_crypto_2024@outlook.com", "******");
+            store.connect("outlook.office365.com", this.userEmail, this.userPassword);
 
             emailFolder = store.getFolder("INBOX");
             emailFolder.open(Folder.READ_ONLY);
@@ -104,34 +123,36 @@ public class InboxGUI {
                     BodyPart bodyPart = multipart.getBodyPart(i);
 
                     if (Part.ATTACHMENT.equalsIgnoreCase(bodyPart.getDisposition())) {
-                        // Ici, vous pouvez choisir de sauvegarder l'image ou de l'utiliser directement si elle est déjà sauvegardée
                         String contentType = bodyPart.getContentType();
-                        System.out.println(contentType);
-                        System.out.println(contentType.startsWith("image/"));
+                        String attachFileName = MimeUtility.decodeText(bodyPart.getFileName());
+
+                        JButton downloadButton = new JButton(attachFileName);
+                        downloadButton.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                try {
+                                    saveAttachment(bodyPart, "./attachments/" + attachFileName);
+                                    JOptionPane.showMessageDialog(frame, "Saved attachment to: ./attachments/" + attachFileName);
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        });
+                        attachmentPanel.add(downloadButton);
+
                         if (contentType.startsWith("image/")) {
                             // C'est une image
-                            System.out.println("ahhaha");
                             InputStream is = bodyPart.getInputStream();
                             BufferedImage img = ImageIO.read(is);
                             ImageIcon icon = new ImageIcon(img);
-                            // Redimensionner l'image si nécessaire
                             Image image = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH); // Exemple de redimensionnement
                             icon = new ImageIcon(image);
-                            String attachFileName = bodyPart.getFileName();
-                            JButton downloadButton = new JButton(attachFileName);
-                            downloadButton.addActionListener(new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent e) {
-                                    try {
-                                        saveAttachment(bodyPart, "./attachments/" + attachFileName);
-                                        JOptionPane.showMessageDialog(frame, "Saved attachment to: ./attachments/" + attachFileName);
-                                    } catch (Exception ex) {
-                                        ex.printStackTrace();
-                                    }
-                                }
-                            });
-                            attachmentPanel.add(downloadButton);
+
                             JLabel label = new JLabel(icon);
+                            attachmentPanel.add(label);
+                        } else {
+                            // Ce n'est pas une image
+                            JLabel label = new JLabel(attachFileName);
                             attachmentPanel.add(label);
                         }
                     }
@@ -176,7 +197,5 @@ public class InboxGUI {
         return result;
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(InboxGUI::new);
-    }
+
 }

@@ -1,79 +1,52 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class MainMenu {
-    public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    MainMenu menu = new MainMenu();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
+    private String userEmail;
+    private String userPassword;
 
-    public MainMenu() {
+    public MainMenu(String email, String password) {
+        this.userEmail = email;
+        this.userPassword = password;
         initializeMainMenu();
     }
 
-    private void initializeMainMenu(){
-        // Cadre principal pour notre menu
+    private void initializeMainMenu() {
+        // Création et configuration de la fenêtre principale
         JFrame frame = new JFrame("Menu Principal");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 200);
 
-        // Panneau pour contenir nos boutons
+        // Panel pour contenir les boutons
         JPanel panel = new JPanel();
         frame.add(panel);
-        placeComponents(panel);
 
-        // Paramétrage de la fenêtre
+        // Placement des composants (boutons) dans le panel
+        placeComponents(panel, frame);
+
+        // Rendre la fenêtre visible
         frame.setVisible(true);
     }
 
-    private static void placeComponents(JPanel panel) {
+    private void placeComponents(JPanel panel, JFrame frame) {
         panel.setLayout(new FlowLayout(FlowLayout.CENTER));
 
-        // Création du bouton pour envoyer un mail
+        // Bouton pour envoyer un mail
         JButton sendMailButton = new JButton("Envoyer un Mail");
-        sendMailButton.setBounds(50, 20, 300, 50);
-        sendMailButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Ferme le menu principal (optionnel)
-                // frame.dispose();
-
-                // Ouvre l'interface d'envoi de mail
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        new MailClientGUI();
-                    }
-                });
-            }
+        sendMailButton.addActionListener(e -> {
+            frame.dispose(); // Fermer le menu principal
+            // Ouvre l'interface d'envoi de mail avec l'email et le mot de passe de l'utilisateur
+            new MailClientGUI(userEmail, userPassword);
         });
-
         panel.add(sendMailButton);
 
-        // Création du bouton pour accéder à la boîte de réception
+        // Bouton pour accéder à la boîte de réception
         JButton inboxButton = new JButton("Boîte de Réception");
-        inboxButton.setBounds(50, 100, 300, 50);
-        inboxButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        new InboxGUI();
-                    }
-                });
-            }
+        inboxButton.addActionListener(e -> {
+            frame.dispose(); // Fermer le menu principal
+            // Ouvre l'interface de la boîte de réception avec l'email et le mot de passe de l'utilisateur
+            new InboxGUI(userEmail, userPassword);
         });
         panel.add(inboxButton);
     }
 }
-
