@@ -7,7 +7,6 @@ public class User {
     HashMap<String, ArrayList<Mail>> mails;
     private String pk;
 
-
     public User(String nom, String prenom, String mail,String password){
         this.nom=nom;
         this.prenom=prenom;
@@ -32,6 +31,5 @@ public class User {
     public ArrayList<Mail> getMails(String adresseMail) {
         return this.mails.getOrDefault(adresseMail, new ArrayList<>());
     }
-
 
 }
