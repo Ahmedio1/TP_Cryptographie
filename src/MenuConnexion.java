@@ -1,6 +1,7 @@
-import java.awt.*;
-import java.awt.event.*;
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class MenuConnexion {
     private JFrame mainFrame;
@@ -52,15 +53,28 @@ public class MenuConnexion {
         mailText = new JTextField(20);
         passwordText = new JPasswordField(20);
 
-        JButton okButton = new JButton("Se Connecter");
-        JButton submitButton = new JButton("Mot de passe oublié ?");
+        JButton connectionButton = new JButton("Se Connecter");
+        JButton pwdButton = new JButton("Mot de passe oublié ?");
 
         Dimension buttonSize = new Dimension(160, 30);
-        okButton.setPreferredSize(buttonSize);
-        submitButton.setPreferredSize(buttonSize);
+        connectionButton.setPreferredSize(buttonSize);
+        pwdButton.setPreferredSize(buttonSize);
 
-        okButton.addActionListener(new ButtonClickListener());
-        submitButton.addActionListener(new ButtonClickListener());
+        connectionButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Ferme le menu principal (optionnel)
+                mainFrame.dispose();
+
+                // Ouvre l'interface d'envoi de mail
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        new MainMenu();
+                    }
+                });
+            }
+        });
 
         constraints.gridx = 0;
         constraints.gridy = 0;
@@ -80,8 +94,8 @@ public class MenuConnexion {
         mainFrame.add(controlPanel, gbc);
 
         buttonPanel = new JPanel();
-        buttonPanel.add(okButton);
-        buttonPanel.add(submitButton);
+        buttonPanel.add(connectionButton);
+        buttonPanel.add(pwdButton);
 
         gbc.gridy = 3;
         mainFrame.add(buttonPanel, gbc);
@@ -93,17 +107,5 @@ public class MenuConnexion {
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
-    private class ButtonClickListener implements ActionListener {
-        public void actionPerformed(ActionEvent e) {
-            String command = e.getActionCommand();
 
-            if (command.equals("Se Connecter")) {
-                String email = mailText.getText();
-                String password = new String(passwordText.getPassword());
-                statusLabel.setText("Connexion: Email - " + email + ", Mot de passe - " + password);
-            } else if (command.equals("Mot de passe oublié ?")) {
-                statusLabel.setText("Menu Rénitialisation de mot de passe.");
-            }
-        }
-    }
 }

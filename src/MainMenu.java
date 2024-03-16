@@ -5,6 +5,22 @@ import java.awt.event.ActionListener;
 
 public class MainMenu {
     public static void main(String[] args) {
+        EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    MainMenu menu = new MainMenu();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public MainMenu() {
+        initializeMainMenu();
+    }
+
+    private void initializeMainMenu(){
         // Cadre principal pour notre menu
         JFrame frame = new JFrame("Menu Principal");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
