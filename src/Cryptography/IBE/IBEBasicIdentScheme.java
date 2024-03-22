@@ -1,5 +1,6 @@
 package Cryptography.IBE;
 
+
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Field;
 import it.unisa.dia.gas.jpbc.Pairing;
@@ -11,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -127,8 +129,8 @@ public class IBEBasicIdentScheme {
     }
 
     protected void build_HashMap() {
-        for (String adresse : identites) {
-            genererClePriveePourID(adresse);
+        for (String address : identites) {
+            genererClePriveePourID(address);
         }
     }
 
@@ -163,23 +165,17 @@ public class IBEBasicIdentScheme {
         return C;
     }
 
-    public byte[] dechiffrement(String ID, IBECipherText cipherText) {
-        // Récupérer la paire de clés pour l'ID donné
-        KeyPair paireCle = pairesCles.get(ID);
-        if (paireCle == null) {
-            throw new IllegalArgumentException("Aucune clé trouvée pour l'ID spécifié: " + ID);
-        }
-        // Utiliser la clé privée pour effectuer le déchiffrement
-        Element skID = paireCle.getSk();
-        // Calculer e(skID, U), où U est une partie du texte chiffré
-        Element eSkIDU = pairing.pairing(skID, cipherText.getU());
+    public byte[] dechiffrement(Element sk, IBECipherText cipherText) {
+        Element eSkU = pairing.pairing(sk, cipherText.getU());
+
         // Convertir le résultat du couplage en bytes et l'appliquer au texte chiffré avec XOR
-        byte[] messageClairBytes = XOR(cipherText.getV(), eSkIDU.toBytes());
+        byte[] messageClairBytes = XOR(cipherText.getV(), eSkU.toBytes());
+
         // Retourner le message clair
         return messageClairBytes;
     }
 
-    public class Main {
+    public static class Main {
 
         public static void main(String[] args) {
             // Créer une instance du schéma IBE.
@@ -193,9 +189,15 @@ public class IBEBasicIdentScheme {
             // Chiffrer le message en utilisant l'identifiant et le message.
             IBECipherText texteChiffre = ibeSchema.chiffrement(utilisateurID, messageClair.getBytes(StandardCharsets.UTF_8));
             // Déchiffrer le message.
-            byte[] messageDechiffre = ibeSchema.dechiffrement(utilisateurID, texteChiffre);
+            byte[] messageDechiffre = ibeSchema.dechiffrement(paireCle.getSk(), texteChiffre);
             // Afficher le message déchiffré.
             System.out.println("Message déchiffré: " + new String(messageDechiffre, StandardCharsets.UTF_8));
+            /*String uEncoded = Base64.encodeBytes(texteChiffre.getU().toBytes());
+            String vEncoded = Base64.encodeBytes(texteChiffre.getV());
+            System.out.println("Message chiffré:");
+            System.out.println("U (partie publique): " + uEncoded);
+            System.out.println("V (message chiffré): " + vEncoded);*/
+
         }
 
     }
