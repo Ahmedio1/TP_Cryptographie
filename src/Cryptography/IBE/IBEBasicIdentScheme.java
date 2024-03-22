@@ -12,7 +12,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -29,11 +28,9 @@ public class IBEBasicIdentScheme {
     protected Element clePublique;
     protected Element cle_Maitresse_privee;
 
-    // Dictionnaire pour stocker les paires de clés utilisateurs.
-    protected HashMap<String, KeyPair> pairesCles = new HashMap<>();
+    protected HashMap<String, Element> PairesCles  = new HashMap();
+    protected ArrayList<String> IDs= new ArrayList();
 
-    // Liste pour stocker les identités (IDs) des utilisateurs.
-    protected ArrayList<String> identites = new ArrayList<>();
 
     public IBEBasicIdentScheme() {
         genererPMKetP();
@@ -68,19 +65,19 @@ public class IBEBasicIdentScheme {
         return cle_Maitresse_privee;
     }
 
-    public HashMap<String, KeyPair> getpairesCles() {
-        return pairesCles;
+    public HashMap<String, Element> getPairesCles() {
+        return PairesCles;
     }
 
-    public ArrayList<String> getidentites() {
-        return identites;
+    public ArrayList<String> getIDs() {
+        return IDs;
     }
 
     protected void New_Set_Up_IBE() {
         genererPMKetP();
         this.clePublique = (this.P).duplicate().mulZn(this.cle_Maitresse_privee);
         //On reconstruit les clés privés et utilisateurs
-        pairesCles.clear();
+        PairesCles.clear();
         build_HashMap();
     }
 
@@ -113,23 +110,28 @@ public class IBEBasicIdentScheme {
             e.printStackTrace();
         }
     }
+    public Element[] Public_Parameters(){
+        Element[] PP = new Element[2];
+        PP[0] = this.P;
+        PP[1] = this.clePublique;
+        return PP;
+    }
 
     // Générer une clé privée pour un identifiant (ID) spécifique.
-    public KeyPair genererClePriveePourID(String ID) {
-        if (!pairesCles.containsKey(ID)) {
-            byte[] bytesID = ID.getBytes();
-            Element Qid = G.newElementFromHash(bytesID, 0, bytesID.length);
+    public Element genererClePriveePourID(String ID) {
+        if (PairesCles.get(ID) == null) {
+            byte[] IDbytes = ID.getBytes();
+            Element Qid = pairing.getG1().newElementFromHash(IDbytes, 0, IDbytes.length);
             Element skID = Qid.duplicate().mulZn(this.cle_Maitresse_privee);
-            KeyPair paireCle = new KeyPair(ID, skID);
-            this.pairesCles.put(ID, paireCle);
-            return paireCle;
+            this.PairesCles.put(ID,  skID);
+            return skID;
         } else {
-            return this.pairesCles.get(ID);
+            return PairesCles.get(ID);
         }
     }
 
     protected void build_HashMap() {
-        for (String address : identites) {
+        for (String address : IDs) {
             genererClePriveePourID(address);
         }
     }
@@ -143,7 +145,7 @@ public class IBEBasicIdentScheme {
         return result;
     }
 
-    public IBECipherText chiffrement(String ID, byte[] message) {
+    public IBECipherText chiffrement(Element P, Element Ppub, String ID, String message) {
         IBECipherText C = new IBECipherText();
         Element r = pairing.getZr().newRandomElement(); // Générer un élément aléatoire r dans Zr
         Element U = P.duplicate().mulZn(r); // U = r * G
@@ -156,7 +158,7 @@ public class IBEBasicIdentScheme {
         Element V = pairing.pairing(Qid, clePublique).powZn(r);
 
         // Effectuer un XOR du résultat avec le message en clair pour obtenir le message chiffré
-        byte[] messageChiffre = XOR(message, V.toBytes());
+        byte[] messageChiffre = XOR(message.getBytes(), V.toBytes());
 
         // Définir U et le message chiffré dans C
         C.setU(U);
@@ -165,8 +167,8 @@ public class IBEBasicIdentScheme {
         return C;
     }
 
-    public byte[] dechiffrement(Element sk, IBECipherText cipherText) {
-        Element eSkU = pairing.pairing(sk, cipherText.getU());
+    public byte[] dechiffrement(Element P, Element Ppub, Element private_key_ID, IBECipherText cipherText) {
+        Element eSkU = pairing.pairing(private_key_ID, cipherText.getU());
 
         // Convertir le résultat du couplage en bytes et l'appliquer au texte chiffré avec XOR
         byte[] messageClairBytes = XOR(cipherText.getV(), eSkU.toBytes());
@@ -180,16 +182,11 @@ public class IBEBasicIdentScheme {
         public static void main(String[] args) {
             // Créer une instance du schéma IBE.
             IBEBasicIdentScheme ibeSchema = new IBEBasicIdentScheme();
-            // Définir l'identifiant de l'utilisateur.
-            String utilisateurID = "jalidyamina1@gmail.com";
-            // Générer la clé privée pour l'identifiant donné.
-            KeyPair paireCle = ibeSchema.genererClePriveePourID(utilisateurID);
-            // Créer un message à chiffrer.
-            String messageClair = "Bonjour, ceci est un message confidentiel.";
+
             // Chiffrer le message en utilisant l'identifiant et le message.
-            IBECipherText texteChiffre = ibeSchema.chiffrement(utilisateurID, messageClair.getBytes(StandardCharsets.UTF_8));
+            IBECipherText texteChiffre = ibeSchema.chiffrement(ibeSchema.P, ibeSchema.clePublique, "jalidyamina1@gmail.com","Bonjour ceci est un message confidentiel");
             // Déchiffrer le message.
-            byte[] messageDechiffre = ibeSchema.dechiffrement(paireCle.getSk(), texteChiffre);
+            byte[] messageDechiffre = ibeSchema.dechiffrement(ibeSchema.P, ibeSchema.P, ibeSchema.genererClePriveePourID("jalidyamina1@gmail.com"), texteChiffre);
             // Afficher le message déchiffré.
             System.out.println("Message déchiffré: " + new String(messageDechiffre, StandardCharsets.UTF_8));
             /*String uEncoded = Base64.encodeBytes(texteChiffre.getU().toBytes());

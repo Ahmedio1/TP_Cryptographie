@@ -3,7 +3,7 @@ import it.unisa.dia.gas.jpbc.Element;
 
 
 
-public class CipherText {
+public class CipherText  {
     private Element u;
     private Element v;
 

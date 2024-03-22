@@ -26,7 +26,7 @@ public class SendReceiveMail {
     //Create file that contains information about AES key
     public File preparerInfosDechiffrementAES(String nomFichier, String cleAES, String adresseDestinataire) throws IOException {
         byte[] cleAESBytes = cleAES.getBytes(StandardCharsets.UTF_8);
-        IBECipherText cipher = this.parametresPublics.chiffrement(adresseDestinataire, cleAESBytes);
+        IBECipherText cipher = this.parametresPublics.chiffrement(this.parametresPublics.getP(), this.parametresPublics.getclePublique(),adresseDestinataire, cleAES);
         Element u = cipher.getU();
         byte[] v = cipher.getV();
         File AESInfos = new File(this.dossierFichiersChiffres, "AES_" + nomFichier.replaceFirst("[.][^.]+$", ".properties"));
@@ -60,7 +60,7 @@ public class SendReceiveMail {
 
         // Déchiffrer la clé AES
         IBECipherText cipherText = new IBECipherText(elementU, octetsV);
-        byte[] cleAESOctets = parametresPublics.dechiffrement(clePrivee, cipherText);
+        byte[] cleAESOctets = parametresPublics.dechiffrement(this.parametresPublics.getP(),this.parametresPublics.getP(),clePrivee, cipherText);
         String cleAES = new String(cleAESOctets);
 
         // Préparer le fichier déchiffré
