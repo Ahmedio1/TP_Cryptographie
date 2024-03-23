@@ -1,16 +1,22 @@
 package Mail;
 
+import Cryptography.AES.AES;
 import Cryptography.AES.AESEncryptingFile;
 import Cryptography.IBE.IBECipherText;
 import Cryptography.IBE.IBEBasicIdentScheme;
 import it.unisa.dia.gas.jpbc.Element;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Properties;
 
@@ -72,6 +78,29 @@ public class SendReceiveMail {
         AESEncryptingFile.fileDecrypt(fichierJoint, fichierDechiffre, cleAES);
 
         return fichierDechiffre;
+    }
+    public void sendMail(String adresseDestinataire, File pieceJointe) {
+        try {
+
+            String cleAES = AES.randomString();
+            File FichierChiffree = new File(this.dossierFichiersChiffres, pieceJointe.getName() + ".chiffre");
+            FichierChiffree.createNewFile();
+            AESEncryptingFile.fileEncrypt(pieceJointe,FichierChiffree,cleAES );
+
+            File AESInfos = preparerInfosDechiffrementAES(pieceJointe.getName(), cleAES, adresseDestinataire );
+
+
+        } catch (NoSuchPaddingException | IOException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalBlockSizeException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        } catch (BadPaddingException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
