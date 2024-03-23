@@ -14,6 +14,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import Mail.SendReceiveMail;
+
+
 public class InboxGUI {
     private JFrame frame;
     private JList<String> listMails;
@@ -25,12 +28,17 @@ public class InboxGUI {
 
     private String userEmail;
     private String userPassword;
+    private String sk;
 
-    public InboxGUI(String email, String password) {
+    private SendReceiveMail receiveMail;
+
+    public InboxGUI(String email, String password,String sk) {
         this.userEmail = email;
         this.userPassword = password;
+        this.sk = sk;
         initializeUI();
         fetchMails();
+        receiveMail = new SendReceiveMail();
     }
 
 
@@ -61,7 +69,7 @@ public class InboxGUI {
             @Override
             public void actionPerformed(ActionEvent e) {
                 frame.dispose(); // Fermer la fenêtre actuelle
-                new MainMenu(userEmail, userPassword); // Réouvrir le MainMenu
+                new MainMenu(userEmail, userPassword,sk); // Réouvrir le MainMenu
             }
         });
         backButtonPanel.add(backButton);
@@ -126,6 +134,7 @@ public class InboxGUI {
                         String contentType = bodyPart.getContentType();
                         String attachFileName = MimeUtility.decodeText(bodyPart.getFileName());
 
+
                         JButton downloadButton = new JButton(attachFileName);
                         downloadButton.addActionListener(new ActionListener() {
                             @Override
@@ -169,6 +178,7 @@ public class InboxGUI {
     private void saveAttachment(BodyPart part, String savePath) throws MessagingException, IOException {
         InputStream input = part.getInputStream();
         File file = new File(savePath);
+        file = receiveMail.dechiffrerPieceJointe(file,,sk);
         // Assurer que le dossier de destination existe
         file.getParentFile().mkdirs();
         try (FileOutputStream output = new FileOutputStream(file)) {

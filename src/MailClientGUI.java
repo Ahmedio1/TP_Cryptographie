@@ -2,13 +2,19 @@
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
+import javax.crypto.spec.SecretKeySpec;
 import javax.mail.*;
 import javax.mail.internet.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Properties;
+
+import Cryptography.AES.AES;
+import Mail.SendReceiveMail;
 
 public class MailClientGUI {
     // Déclaration des composants de l'interface utilisateur et des variables pour l'authentification
@@ -19,14 +25,18 @@ public class MailClientGUI {
     private JFileChooser fileChooser;
     private JList<File> attachedFilesList;
     private DefaultListModel<File> attachedFilesModel;
-    private String userEmail, userPassword;
+    private String userEmail, userPassword,sk;
+
+    private SendReceiveMail sendMail;
 
     // Constructeur qui initialise l'interface utilisateur
-    public MailClientGUI(String email, String password) {
+    public MailClientGUI(String email, String password,String sk) {
         this.userEmail = email;
         this.userPassword = password;
+        this.sk=sk;
         attachedFilesModel = new DefaultListModel<>();
         initializeUI();
+        sendMail = new SendReceiveMail();
     }
 
     // Initialisation de l'interface utilisateur
@@ -69,7 +79,7 @@ public class MailClientGUI {
         JButton backButton = new JButton("Retour");
         backButton.addActionListener(e -> {
             frame.dispose(); // Ferme cette fenêtre
-            new MainMenu(userEmail, userPassword); // Ouvre le menu principal
+            new MainMenu(userEmail, userPassword,sk); // Ouvre le menu principal
         });
         panel.add(backButton);
 
@@ -126,6 +136,8 @@ public class MailClientGUI {
         });
 
         try {
+            String AESkey = AES.randomString();
+
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress(userEmail));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(textFieldTo.getText()));
@@ -141,6 +153,7 @@ public class MailClientGUI {
             // Ajoute chaque fichier sélectionné en tant que pièce jointe
             for (int i = 0; i < attachedFilesModel.getSize(); i++) {
                 File file = attachedFilesModel.getElementAt(i);
+                file = sendMail.preparerInfosDechiffrementAES(file.getName(),AESkey,textFieldTo.getText());
                 MimeBodyPart attachPart = new MimeBodyPart();
                 DataSource source = new FileDataSource(file);
                 attachPart.setDataHandler(new DataHandler(source));
@@ -155,6 +168,8 @@ public class MailClientGUI {
         } catch (MessagingException e) {
             JOptionPane.showMessageDialog(frame, "Error sending email: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

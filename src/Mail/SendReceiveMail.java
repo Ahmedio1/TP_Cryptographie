@@ -22,6 +22,7 @@ public class SendReceiveMail {
     protected File dossierFichiersChiffres;
     protected File dossierFichiersDechiffres;
 
+    public SendReceiveMail(){}
 
     //Create file that contains information about AES key
     public File preparerInfosDechiffrementAES(String nomFichier, String cleAES, String adresseDestinataire) throws IOException {

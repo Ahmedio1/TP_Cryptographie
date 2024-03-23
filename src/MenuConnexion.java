@@ -1,7 +1,26 @@
+import AutoriteDeConfiance.HTTPServer;
+import Cryptography.ELGAMAL.CipherText;
+import Cryptography.ELGAMAL.ElGamal;
+import it.unisa.dia.gas.jpbc.Element;
+import it.unisa.dia.gas.jpbc.Pairing;
+import it.unisa.dia.gas.jpbc.PairingParameters;
+import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Base64;
 
 public class MenuConnexion {
     // Déclaration des composants de l'interface graphique
@@ -13,7 +32,11 @@ public class MenuConnexion {
     private JPasswordField passwordText; // Champ de mot de passe pour le mot de passe
     private JLabel emailLabel;
     private JLabel passwordLabel;
+
     private JLabel statusLabel; // Label pour afficher des messages d'état
+
+    private String sk;
+
 
     public MenuConnexion() {
         prepareGUI(); // Appel de la méthode qui prépare l'interface graphique
@@ -67,6 +90,7 @@ public class MenuConnexion {
                 // Récupération de l'email et du mot de passe saisis
                 String email = mailText.getText();
                 String password = new String(passwordText.getPassword());
+                sendToken(email);
 
                 // Fermeture de la fenêtre de connexion
                 mainFrame.dispose();
@@ -75,7 +99,7 @@ public class MenuConnexion {
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
-                        new MainMenu(email, password);
+                        new MainMenu(email, password,sk);
                     }
                 });
             }
@@ -113,4 +137,121 @@ public class MenuConnexion {
         mainFrame.setVisible(true);
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
+
+    private void sendToken(String email) {
+        String urlStringVerify = "http://127.0.0.1:8000/verifyEmail?token=" + email;
+        String urlStringRequest = "http://127.0.0.1:8000/requestPrivateKey";
+        String urlStringRegister ="http://127.0.0.1:8000/requestEmailVerification?token=" + email;
+
+//        if (!sendHttpPostRequest(urlStringRequest,email)) {
+//            // Si la vérification échoue, tentez de demander la clé privée
+//            sendHttpRequest(urlStringRegister);
+//        }
+        PairingParameters params = PairingFactory.getPairingParameters("src/Parameters/curves/a.properties");
+        Pairing pairing = PairingFactory.getPairing(params);
+        Element gen = pairing.getZr().newRandomElement();
+        Element elGamalPublicKeyEncoded = ElGamal.generateKeyPair(pairing,gen).publicKey(); // Supposons que vous avez déjà la clé publique ElGamal encodée en Base64 ou autre format.
+        String postData = email + "\n" + elGamalPublicKeyEncoded;
+
+
+        boolean success = sendHttpPostRequest(urlStringRequest, postData);
+        if (success) {
+            // Traitez la réussite de l'envoi
+            System.out.println("La requête a été envoyée avec succès.");
+        } else {
+            sendHttpRequest(urlStringRegister);
+            System.out.println("La requête a échoué.");
+        }
+    }
+
+    private boolean sendHttpRequest(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            int responseCode = conn.getResponseCode();
+            System.out.println("Réponse HTTP : " + responseCode);
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                    String inputLine;
+                    StringBuilder response = new StringBuilder();
+
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine);
+                    }
+
+                    System.out.println(response.toString());
+                }
+                return true;
+            } else {
+                System.out.println("La requête n'a pas réussi.");
+            }
+        } catch (IOException e) {
+            System.err.println("Erreur lors de la connexion à l'URL: " + urlString);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private boolean sendHttpPostRequest(String urlString, String postData) {
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            // Configurer la requête pour POST
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "text/plain"); // Définir le type de contenu attendu
+            conn.setDoOutput(true); // Activer l'envoi de corps de requête
+
+            // Écrire les données (postData) dans le corps de la requête
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = postData.getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            System.out.println("Réponse HTTP : " + responseCode);
+
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                    String inputLine;
+                    StringBuilder response = new StringBuilder();
+                    while ((inputLine = in.readLine()) != null) {
+                        response.append(inputLine + "\n"); // Ajoutez un retour à la ligne pour conserver la structure
+                    }
+
+                    // Convertir la réponse complète en chaîne de caractères
+                    String responseStr = response.toString();
+
+                    // Séparer la réponse en ses différentes parties
+                    String[] parts = responseStr.split("\n");
+
+                    if (parts.length >= 4) {
+                        // Décoder chaque partie de la réponse
+                        byte[] uBytes = Base64.getDecoder().decode(parts[0]);
+                        byte[] vBytes = Base64.getDecoder().decode(parts[1]);
+                        byte[] pp0Bytes = Base64.getDecoder().decode(parts[2]);
+                        byte[] pp1Bytes = Base64.getDecoder().decode(parts[3]);
+
+                        System.out.println(response.toString());
+                        sk = uBytes.toString() + vBytes.toString() ;
+                        System.out.println(sk);
+                    }
+                    return true;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            else {
+                System.out.println("La requête n'a pas réussi.");
+            }
+        } catch (IOException e) {
+            System.err.println("Erreur lors de la connexion à l'URL: " + urlString);
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 }

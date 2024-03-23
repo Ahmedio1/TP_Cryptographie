@@ -4,10 +4,12 @@ import java.awt.*;
 public class MainMenu {
     private String userEmail;
     private String userPassword;
+    private String sk;
 
-    public MainMenu(String email, String password) {
+    public MainMenu(String email, String password,String sk) {
         this.userEmail = email;
         this.userPassword = password;
+        this.sk=sk;
         initializeMainMenu();
     }
 
@@ -36,7 +38,7 @@ public class MainMenu {
         sendMailButton.addActionListener(e -> {
             frame.dispose(); // Fermer le menu principal
             // Ouvre l'interface d'envoi de mail avec l'email et le mot de passe de l'utilisateur
-            new MailClientGUI(userEmail, userPassword);
+            new MailClientGUI(userEmail, userPassword,sk);
         });
         panel.add(sendMailButton);
 
@@ -45,7 +47,7 @@ public class MainMenu {
         inboxButton.addActionListener(e -> {
             frame.dispose(); // Fermer le menu principal
             // Ouvre l'interface de la boîte de réception avec l'email et le mot de passe de l'utilisateur
-            new InboxGUI(userEmail, userPassword);
+            new InboxGUI(userEmail, userPassword,sk);
         });
         panel.add(inboxButton);
     }
