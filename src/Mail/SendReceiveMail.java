@@ -58,7 +58,7 @@ public class SendReceiveMail {
         Element elementU = parametresPublics.getG().newElement();
         elementU.setFromBytes(octetsU);
 
-        // Déchiffrer la clé AES
+        // Déchiffrer la clé AES avec IBE private key
         IBECipherText cipherText = new IBECipherText(elementU, octetsV);
         byte[] cleAESOctets = parametresPublics.dechiffrement(this.parametresPublics.getP(),this.parametresPublics.getP(),clePrivee, cipherText);
         String cleAES = new String(cleAESOctets);
