@@ -12,11 +12,11 @@ public class CipherText  {
         this.v = v;
     }
 
-    public Element getU() {
-        return u;
+    public Element u() {
+        return this.u;
     }
 
-    public Element getV() {
-        return v;
+    public Element v() {
+        return this.v;
     }
 }

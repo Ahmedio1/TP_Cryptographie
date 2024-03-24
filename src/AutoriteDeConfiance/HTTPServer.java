@@ -68,8 +68,8 @@ public class HTTPServer {
                     Element[] PP = ibeScheme.Public_Parameters();
 
                     // Préparation de la réponse incluant la clé privée IBE chiffrée et les paramètres publics
-                    String responseStr = Base64.encodeBytes(encryptedPrivateKey.getU().toBytes()) + "\n" +
-                            Base64.encodeBytes(encryptedPrivateKey.getV().toBytes()) + "\n" +
+                    String responseStr = Base64.encodeBytes(encryptedPrivateKey.u().toBytes()) + "\n" +
+                            Base64.encodeBytes(encryptedPrivateKey.v().toBytes()) + "\n" +
                             Base64.encodeBytes(PP[0].toBytes()) + "\n" +
                             Base64.encodeBytes(PP[1].toBytes());
                     byte[] responseBytes = responseStr.getBytes();
