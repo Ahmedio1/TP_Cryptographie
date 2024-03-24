@@ -36,7 +36,7 @@ public class SendReceiveMail {
         IBECipherText cipher = this.parametresPublics.chiffrement(this.parametresPublics.getP(), this.parametresPublics.getclePublique(),adresseDestinataire, cleAES);
         Element u = cipher.getU();
         byte[] v = cipher.getV();
-        File AESInfos = new File(this.dossierFichiersChiffres, "AES_" + nomFichier.replaceFirst("[.][^.]+$", ".properties"));
+        File AESInfos = new File(this.dossierFichiersChiffres,  nomFichier + ".properties" /*nomFichier.replaceFirst("[.][^.]+$", ".properties")*/);
         AESInfos.createNewFile();
         Properties props = new Properties();
         props.load(new FileInputStream(AESInfos));
@@ -67,6 +67,7 @@ public class SendReceiveMail {
 
         // Déchiffrer la clé AES avec IBE private key
         IBECipherText cipherText = new IBECipherText(elementU, octetsV);
+        System.out.println(cipherText.getU());
         byte[] cleAESOctets = parametresPublics.dechiffrement(this.parametresPublics.getP(),this.parametresPublics.getP(),clePrivee, cipherText);
         String cleAES = new String(cleAESOctets);
 
@@ -79,7 +80,7 @@ public class SendReceiveMail {
 
         return fichierDechiffre;
     }
-    public void sendMail(String adresseDestinataire, File pieceJointe) {
+    public File[] chiffrePieceJointe(String adresseDestinataire, File pieceJointe) {
         try {
 
             String cleAES = AES.randomString();
@@ -88,7 +89,7 @@ public class SendReceiveMail {
             AESEncryptingFile.fileEncrypt(pieceJointe,FichierChiffree,cleAES );
 
             File AESInfos = preparerInfosDechiffrementAES(pieceJointe.getName(), cleAES, adresseDestinataire );
-
+            return new File[]{FichierChiffree, AESInfos};
 
         } catch (NoSuchPaddingException | IOException e) {
             throw new RuntimeException(e);

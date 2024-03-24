@@ -1,4 +1,5 @@
 import javax.imageio.ImageIO;
+import it.unisa.dia.gas.jpbc.Element;
 import javax.mail.*;
 import javax.mail.internet.*;
 import javax.swing.*;
@@ -12,6 +13,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import Mail.SendReceiveMail;
@@ -28,11 +32,13 @@ public class InboxGUI {
 
     private String userEmail;
     private String userPassword;
-    private String sk;
+    private Element sk;
 
     private SendReceiveMail receiveMail;
 
-    public InboxGUI(String email, String password,String sk) {
+    private Map<File, File> fichiersChiffresMap = new HashMap<>();
+
+    public InboxGUI(String email, String password,Element sk) {
         this.userEmail = email;
         this.userPassword = password;
         this.sk = sk;
@@ -123,64 +129,85 @@ public class InboxGUI {
 
             attachmentPanel.removeAll(); // Nettoyez le panel pour les nouvelles pièces jointes
 
-            // Traitement du contenu du message pour les pièces jointes
             if (message.getContent() instanceof Multipart) {
                 Multipart multipart = (Multipart) message.getContent();
+                Map<File, File> fichiersChiffresMap = new HashMap<>();
 
                 for (int i = 0; i < multipart.getCount(); i++) {
                     BodyPart bodyPart = multipart.getBodyPart(i);
-
                     if (Part.ATTACHMENT.equalsIgnoreCase(bodyPart.getDisposition())) {
-                        String contentType = bodyPart.getContentType();
-                        String attachFileName = MimeUtility.decodeText(bodyPart.getFileName());
+                        String attachFileName = bodyPart.getFileName();
+                        if (attachFileName != null) {
+                            attachFileName = MimeUtility.decodeText(attachFileName);
+                        }
+                        File downloadedFile = saveAttachment(bodyPart, "./attachmentss/" + attachFileName);
 
-
-                        JButton downloadButton = new JButton(attachFileName);
-                        downloadButton.addActionListener(new ActionListener() {
-                            @Override
-                            public void actionPerformed(ActionEvent e) {
-                                try {
-                                    saveAttachment(bodyPart, "./attachments/" + attachFileName);
-                                    JOptionPane.showMessageDialog(frame, "Saved attachment to: ./attachments/" + attachFileName);
-                                } catch (Exception ex) {
-                                    ex.printStackTrace();
+                        if (attachFileName != null && attachFileName.endsWith(".properties")) {
+                            System.out.println("oui");
+                            String aesFileName = attachFileName.replace(".properties", ".chiffre");
+                            for (int j = 0; j < multipart.getCount(); j++) {
+                                BodyPart aesBodyPart = multipart.getBodyPart(j);
+                                String aesFileNameEncoded = aesBodyPart.getFileName();
+                                System.out.println(aesFileNameEncoded);
+                                if (aesFileNameEncoded != null) {
+                                    String aesFileNameDecoded = MimeUtility.decodeText(aesFileNameEncoded);
+                                    if (aesFileName.equals(aesFileNameDecoded)) {
+                                        File aesFile = saveAttachment(aesBodyPart, "./attachments/" + aesFileName);
+                                        fichiersChiffresMap.put(downloadedFile, aesFile); // Associe le fichier chiffré avec son fichier d'infos AES
+                                        break;
+                                    }
                                 }
                             }
-                        });
-                        attachmentPanel.add(downloadButton);
-
-                        if (contentType.startsWith("image/")) {
-                            // C'est une image
-                            InputStream is = bodyPart.getInputStream();
-                            BufferedImage img = ImageIO.read(is);
-                            ImageIcon icon = new ImageIcon(img);
-                            Image image = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH); // Exemple de redimensionnement
-                            icon = new ImageIcon(image);
-
-                            JLabel label = new JLabel(icon);
-                            attachmentPanel.add(label);
-                        } else {
-                            // Ce n'est pas une image
-                            JLabel label = new JLabel(attachFileName);
-                            attachmentPanel.add(label);
                         }
                     }
                 }
-            }
 
-            attachmentPanel.revalidate();
-            attachmentPanel.repaint();
+                // Déchiffrement de toutes les pièces jointes
+                ArrayList<File> decryptedFiles = new ArrayList<>();
+                for (Map.Entry<File, File> entry : fichiersChiffresMap.entrySet()) {
+                    File fichierChiffre = entry.getValue();
+                    File fichierInfosAES = entry.getKey();
+                    File decryptedFile = receiveMail.dechiffrerPieceJointe(fichierChiffre, fichierInfosAES, sk);
+                    decryptedFiles.add(decryptedFile);
+                    System.out.println(decryptedFile.getName());
+                }
+
+                // Ajout des fichiers déchiffrés en téléchargement en bas de la page
+                JPanel downloadPanel = new JPanel();
+                downloadPanel.setLayout(new BoxLayout(downloadPanel, BoxLayout.Y_AXIS));
+                for (File decryptedFile : decryptedFiles) {
+                    JLabel downloadLabel = new JLabel("<html><a href=\"file:" + decryptedFile.getAbsolutePath() + "\">Télécharger " + decryptedFile.getName() + "</a></html>");
+                    downloadLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                    downloadLabel.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mouseClicked(MouseEvent e) {
+                            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                                try {
+                                    Desktop.getDesktop().open(decryptedFile);
+                                } catch (IOException ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+                    downloadPanel.add(downloadLabel);
+                }
+                attachmentPanel.add(downloadPanel, BorderLayout.SOUTH);
+
+                attachmentPanel.revalidate();
+                attachmentPanel.repaint();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void saveAttachment(BodyPart part, String savePath) throws MessagingException, IOException {
+
+
+    private File saveAttachment(BodyPart part, String savePath) throws MessagingException, IOException {
         InputStream input = part.getInputStream();
         File file = new File(savePath);
-        file = receiveMail.dechiffrerPieceJointe(file,,sk);
-        // Assurer que le dossier de destination existe
-        file.getParentFile().mkdirs();
+        file.getParentFile().mkdirs(); // Assurez-vous que le répertoire existe
         try (FileOutputStream output = new FileOutputStream(file)) {
             byte[] buffer = new byte[4096];
             int bytesRead;
@@ -188,7 +215,9 @@ public class InboxGUI {
                 output.write(buffer, 0, bytesRead);
             }
         }
+        return file; // Retourne le fichier sauvegardé
     }
+
 
 
     private String getTextFromMessage(Message message) throws MessagingException, IOException {

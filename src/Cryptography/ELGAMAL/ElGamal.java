@@ -1,5 +1,6 @@
 package Cryptography.ELGAMAL;
 import it.unisa.dia.gas.jpbc.Element;
+import it.unisa.dia.gas.jpbc.Field;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
@@ -53,6 +54,36 @@ public class ElGamal {
 
         return msg;
     }
+
+    public static byte[] elGamalDecrypt(byte[] uBytes, byte[] vBytes, Element privateKey) {
+        try {
+            // Charger les paramètres de couplage
+            Pairing pairing = PairingFactory.getPairing("src/Parameters/curves/a.properties");
+            // Convertir uBytes et vBytes en éléments du groupe
+            Field G1 = pairing.getG1();
+            Element u = G1.newElementFromBytes(uBytes);
+            Element v = G1.newElementFromBytes(vBytes);
+
+            CipherText cipher = new CipherText(u,v);
+            System.out.println(u + " " + v);
+
+            // Calculer l'inverse de u^privateKey
+            Element uToSkInverse = u.powZn(privateKey).invert();
+
+            // Multiplier v par l'inverse de u^privateKey pour obtenir le message déchiffré
+            Element mDecrypted = v.mul(uToSkInverse);
+
+            // Convertir l'élément déchiffré en bytes
+            byte[] decryptedBytes = mDecrypted.toBytes();
+            System.out.println(decryptedBytes.toString());
+
+            return decryptedBytes;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 
 
 }

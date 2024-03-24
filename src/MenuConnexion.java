@@ -1,6 +1,8 @@
 import AutoriteDeConfiance.HTTPServer;
 import Cryptography.ELGAMAL.CipherText;
 import Cryptography.ELGAMAL.ElGamal;
+import Cryptography.ELGAMAL.KeyPair;
+import Cryptography.IBE.IBEBasicIdentScheme;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.jpbc.PairingParameters;
@@ -10,13 +12,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
+import java.io.*;
+import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -35,7 +32,8 @@ public class MenuConnexion {
 
     private JLabel statusLabel; // Label pour afficher des messages d'état
 
-    private String sk;
+    private Element sk;
+    private IBEBasicIdentScheme ibeParams = new IBEBasicIdentScheme();
 
 
     public MenuConnexion() {
@@ -150,11 +148,14 @@ public class MenuConnexion {
         PairingParameters params = PairingFactory.getPairingParameters("src/Parameters/curves/a.properties");
         Pairing pairing = PairingFactory.getPairing(params);
         Element gen = pairing.getZr().newRandomElement();
-        Element elGamalPublicKeyEncoded = ElGamal.generateKeyPair(pairing,gen).publicKey(); // Supposons que vous avez déjà la clé publique ElGamal encodée en Base64 ou autre format.
+        KeyPair elGamalkey = ElGamal.generateKeyPair(pairing,gen);
+        System.out.println(elGamalkey.publicKey().toString());
+        String elGamalPublicKeyEncoded = it.unisa.dia.gas.plaf.jpbc.util.io.Base64.encodeBytes(elGamalkey.publicKey().toBytes());
+        Element elGamalPrivateKeyEncoded = elGamalkey.privatekey();// Supposons que vous avez déjà la clé publique ElGamal encodée en Base64 ou autre format.
         String postData = email + "\n" + elGamalPublicKeyEncoded;
+        System.out.println("Cle public el :"+ elGamalPublicKeyEncoded.toString() + "clé pv : "+ elGamalPrivateKeyEncoded.toString());
 
-
-        boolean success = sendHttpPostRequest(urlStringRequest, postData);
+        boolean success = sendHttpPostRequest(urlStringRequest, postData,elGamalPrivateKeyEncoded);
         if (success) {
             // Traitez la réussite de l'envoi
             System.out.println("La requête a été envoyée avec succès.");
@@ -194,7 +195,7 @@ public class MenuConnexion {
         return false;
     }
 
-    private boolean sendHttpPostRequest(String urlString, String postData) {
+    private boolean sendHttpPostRequest(String urlString, String postData,Element elGamalPrivateKey) {
         try {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -235,23 +236,60 @@ public class MenuConnexion {
                         byte[] pp0Bytes = Base64.getDecoder().decode(parts[2]);
                         byte[] pp1Bytes = Base64.getDecoder().decode(parts[3]);
 
-                        System.out.println(response.toString());
-                        sk = uBytes.toString() + vBytes.toString() ;
-                        System.out.println(sk);
+                        // Vérifier si la longueur de la réponse est suffisante
+                        if (uBytes.length == 0 || vBytes.length == 0 || pp0Bytes.length == 0 || pp1Bytes.length == 0) {
+                            System.out.println("Erreur : la réponse du serveur est invalide");
+                            return false;
+                        }
+
+                        // Déchiffrer la clé privée IBE à l'aide de la clé privée ElGamal
+                        byte[] decryptedPrivateKeyIBEBytes;
+                        try {
+                            decryptedPrivateKeyIBEBytes = ElGamal.elGamalDecrypt(uBytes, vBytes, elGamalPrivateKey);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            System.out.println("Erreur lors du déchiffrement ElGamal");
+                            return false;
+                        }
+
+                        // Convertir les bytes déchiffrés en un élément de l'espace Zr du groupe bilinéaire
+                        Pairing pairing = PairingFactory.getPairing("src/Parameters/curves/a.properties");
+                        Element privateKeyIBE = pairing.getZr().newElementFromBytes(decryptedPrivateKeyIBEBytes);
+
+                        // Vérifier si la clé privée IBE est valide
+                        if (privateKeyIBE.isZero()) {
+                            System.out.println("Erreur : la clé privée IBE est invalide");
+                            return false;
+                        }
+
+                        // Stocker la clé privée IBE dans une variable
+                        sk = privateKeyIBE;
+                        System.out.println("Clé privée IBE : " + sk);
+
+
+                        return true;
+                    } else {
+                        System.out.println("Erreur : la réponse du serveur est invalide");
+                        return false;
                     }
-                    return true;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+
+
                 }
-            }
-            else {
-                System.out.println("La requête n'a pas réussi.");
-            }
+            catch (IOException e) {
+                    System.err.println("Erreur lors de la connexion à l'URL: " + urlString);
+                    e.printStackTrace();
+                }
+                }
+                return false;
+            } catch (ProtocolException e) {
+            throw new RuntimeException(e);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
         } catch (IOException e) {
-            System.err.println("Erreur lors de la connexion à l'URL: " + urlString);
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return false;
+    }
     }
 
-}

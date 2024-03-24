@@ -36,6 +36,7 @@ public class HTTPServer {
             HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
             IBEBasicIdentScheme ibeScheme = new IBEBasicIdentScheme();
             verifiedEmails.put("tp_crypto_2024@outlook.com",true);
+            verifiedEmails.put("tp_crypto_2_2024@outlook.com",true);
 
             server.createContext("/requestEmailVerification", exchange -> {
                 String query = exchange.getRequestURI().getQuery();
@@ -85,11 +86,13 @@ public class HTTPServer {
                     Element elGamalPublicKey = pairing.getZr().newElement();
                     Element generator = pairing.getZr().newRandomElement();
                     elGamalPublicKey.setFromBytes(Base64.decode(parts[1]));
+                    System.out.println(parts[1]);
 
                     System.out.println(clientEmail);
-                    System.out.println(elGamalPublicKey);
+                    System.out.println("cle public elgamal "+elGamalPublicKey);
 
                     Element privateKeyIBE = ibeScheme.genererClePriveePourID(clientEmail);
+                    System.out.println("clepv IBE "+ privateKeyIBE.toString());
                     //Chiffrement de la clé privée IBE avec la clé publique ElGamal de l'utilisateur
                     CipherText encryptedPrivateKey = encrypt(privateKeyIBE, elGamalPublicKey, pairing, generator);
 
@@ -97,6 +100,7 @@ public class HTTPServer {
                     Element[] PP = ibeScheme.Public_Parameters();
 
                     // Préparation de la réponse incluant la clé privée IBE chiffrée et les paramètres publics
+                    System.out.println(encryptedPrivateKey.getU() + " " + encryptedPrivateKey.getV());
                     String responseStr = Base64.encodeBytes(encryptedPrivateKey.getU().toBytes()) + "\n" +
                             Base64.encodeBytes(encryptedPrivateKey.getV().toBytes()) + "\n" +
                             Base64.encodeBytes(PP[0].toBytes()) + "\n" +

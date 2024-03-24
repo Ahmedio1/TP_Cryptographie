@@ -1,12 +1,14 @@
+import it.unisa.dia.gas.jpbc.Element;
+
 import javax.swing.*;
 import java.awt.*;
 
 public class MainMenu {
     private String userEmail;
     private String userPassword;
-    private String sk;
+    private Element sk;
 
-    public MainMenu(String email, String password,String sk) {
+    public MainMenu(String email, String password, Element sk) {
         this.userEmail = email;
         this.userPassword = password;
         this.sk=sk;

@@ -15,6 +15,7 @@ import java.util.Properties;
 
 import Cryptography.AES.AES;
 import Mail.SendReceiveMail;
+import it.unisa.dia.gas.jpbc.Element;
 
 public class MailClientGUI {
     // Déclaration des composants de l'interface utilisateur et des variables pour l'authentification
@@ -25,12 +26,14 @@ public class MailClientGUI {
     private JFileChooser fileChooser;
     private JList<File> attachedFilesList;
     private DefaultListModel<File> attachedFilesModel;
-    private String userEmail, userPassword,sk;
+    private String userEmail, userPassword;
+
+    private Element sk;
 
     private SendReceiveMail sendMail;
 
     // Constructeur qui initialise l'interface utilisateur
-    public MailClientGUI(String email, String password,String sk) {
+    public MailClientGUI(String email, String password,Element sk) {
         this.userEmail = email;
         this.userPassword = password;
         this.sk=sk;
@@ -153,12 +156,14 @@ public class MailClientGUI {
             // Ajoute chaque fichier sélectionné en tant que pièce jointe
             for (int i = 0; i < attachedFilesModel.getSize(); i++) {
                 File file = attachedFilesModel.getElementAt(i);
-                file = sendMail.preparerInfosDechiffrementAES(file.getName(),AESkey,textFieldTo.getText());
-                MimeBodyPart attachPart = new MimeBodyPart();
-                DataSource source = new FileDataSource(file);
-                attachPart.setDataHandler(new DataHandler(source));
-                attachPart.setFileName(file.getName());
-                multipart.addBodyPart(attachPart);
+                File[] files = sendMail.chiffrePieceJointe(textFieldTo.getText(),file);
+                for (int j = 0 ; j<2; j++) {
+                    MimeBodyPart attachPart = new MimeBodyPart();
+                    DataSource source = new FileDataSource(files[j]);
+                    attachPart.setDataHandler(new DataHandler(source));
+                    attachPart.setFileName(files[j].getName());
+                    multipart.addBodyPart(attachPart);
+                }
             }
 
             message.setContent(multipart);
@@ -168,8 +173,6 @@ public class MailClientGUI {
         } catch (MessagingException e) {
             JOptionPane.showMessageDialog(frame, "Error sending email: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 }
