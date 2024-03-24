@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+import java.util.Base64;
 
 
 public class ClientConnexion {
@@ -49,8 +50,12 @@ public class ClientConnexion {
 
             generateElGamalKeyPair();
             Element publicKey = elGamalKeyPair.publicKey();
-            System.out.println(publicKey);
-            out.write(publicKey.toBytes());
+
+            // Encoder la clé publique en Base64 avant de l'envoyer
+            byte[] publicKeyBytes = publicKey.toBytes();
+            String publicKeyBase64 = Base64.getEncoder().encodeToString(publicKeyBytes);
+            out.write(publicKeyBase64.getBytes());
+
 
             InputStream dis = urlConn.getInputStream();
             System.out.println(Integer.parseInt(urlConn.getHeaderField("Content-length")));
