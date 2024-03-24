@@ -67,6 +67,7 @@ public class MenuConnexion {
                 // Récupération de l'email et du mot de passe saisis
                 String email = mailText.getText();
                 String password = new String(passwordText.getPassword());
+                
 
                 // Fermeture de la fenêtre de connexion
                 mainFrame.dispose();

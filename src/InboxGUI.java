@@ -84,29 +84,73 @@ public class InboxGUI {
     }
 
     private void fetchMails() {
+        String domain = userEmail.substring(userEmail.indexOf('@') + 1);
+
+        // Liste des domaines à prendre en charge pour Gmail
+        String[] gmailDomains = {"gmail.com", "googlemail.com", "gmail.fr", "gmail.co.uk"};
+
+        // Liste des domaines à prendre en charge pour Outlook
+        String[] outlookDomains = {"outlook.com", "hotmail.com", "live.com", "msn.com", "outlook.fr", "outlook.co.uk"};
+
+
+
+
         Properties props = new Properties();
         props.put("mail.store.protocol", "imaps");
-        props.put("mail.imaps.host", "outlook.office365.com");
-        props.put("mail.imaps.port", "993");
         props.put("mail.imaps.starttls.enable", "true");
 
+        // Utiliser le domaine pour décider quelle session utiliser
+        Session session = Session.getInstance(props);
+        String host;
+        int port = 993;
+
+        String gmailHost = "imap.gmail.com";
+
+        String outlookHost = "outlook.office365.com";
+
+
+        if (isInDomain(domain, gmailDomains)) {
+            // Utiliser la session Gmail
+            host = gmailHost;
+        } else if (isInDomain(domain, outlookDomains)) {
+            // Utiliser la session Outlook
+            host = outlookHost;
+        } else {
+            // Autre fournisseur de messagerie (à adapter selon vos besoins)
+            System.out.println("Le fournisseur de messagerie pour le domaine '" + domain + "' n'est pas pris en charge.");
+            return;
+        }
+
+
         try {
-            Session emailSession = Session.getInstance(props);
-            store = emailSession.getStore("imaps");
-            store.connect("outlook.office365.com", this.userEmail, this.userPassword);
+            // Connexion à la session appropriée en utilisant les informations d'identification de l'utilisateur
+            Store store = session.getStore("imaps");
+            store.connect(host, port, userEmail, userPassword);
 
             emailFolder = store.getFolder("INBOX");
             emailFolder.open(Folder.READ_ONLY);
 
             Message[] messages = emailFolder.getMessages();
-            for (int i = 0; i < messages.length; i++) {
+            //for (int i = 0; i < messages.length; i++) {
+            for (int i = 0; i < 20; i++) {
                 listModel.addElement(messages[i].getSubject());
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    // Méthode pour vérifier si un domaine est présent dans une liste de domaines
+    private boolean isInDomain(String domain, String[] domainList) {
+        for (String allowedDomain : domainList) {
+            if (domain.equalsIgnoreCase(allowedDomain)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
     private void displaySelectedMessage(int index) {
         try {
