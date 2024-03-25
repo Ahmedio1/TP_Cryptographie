@@ -33,7 +33,7 @@ public class ClientConnexion {
     }
 
     public void generateElGamalKeyPair() {
-        PairingParameters pairingParams = PairingFactory.getPairingParameters("params/curves/a.properties");
+        PairingParameters pairingParams = PairingFactory.getPairingParameters("src/params/curves/a.properties");
         Pairing pairing = PairingFactory.getPairing(pairingParams);
         Element generator = pairing.getZr().newRandomElement();
         elGamalKeyPair = ElGamal.generateKeyPair(pairing, generator);
