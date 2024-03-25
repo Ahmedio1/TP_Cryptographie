@@ -4,6 +4,7 @@ package Cryptography.IBE;
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Field;
 import it.unisa.dia.gas.jpbc.Pairing;
+import it.unisa.dia.gas.jpbc.PairingParameters;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 import it.unisa.dia.gas.plaf.jpbc.util.io.Base64;
 
@@ -121,9 +122,10 @@ public class IBEBasicIdentScheme {
     public Element genererClePriveePourID(String ID) {
         if (PairesCles.get(ID) == null) {
             byte[] IDbytes = ID.getBytes();
-            Element Qid = pairing.getG1().newElementFromHash(IDbytes, 0, IDbytes.length);
+            Element Qid = pairing.getG1().newElementFromBytes(IDbytes);
             Element skID = Qid.duplicate().mulZn(this.cle_Maitresse_privee);
             this.PairesCles.put(ID,  skID);
+
             return skID;
         } else {
             return PairesCles.get(ID);
@@ -167,7 +169,10 @@ public class IBEBasicIdentScheme {
         return C;
     }
 
+
+
     public byte[] dechiffrement(Element P, Element Ppub, Element private_key_ID, IBECipherText cipherText) {
+        System.out.println(private_key_ID);
         Element eSkU = pairing.pairing(private_key_ID, cipherText.getU());
 
         // Convertir le résultat du couplage en bytes et l'appliquer au texte chiffré avec XOR
@@ -176,6 +181,7 @@ public class IBEBasicIdentScheme {
         // Retourner le message clair
         return messageClairBytes;
     }
+
 
     public static class Main {
 

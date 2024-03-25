@@ -1,6 +1,6 @@
 package AutoriteDeConfiance;
 
-import Cryptography.ELGAMAL.CipherText;
+import Cryptography.ELGAMAL.ElgamalCipher;
 import Cryptography.IBE.IBEBasicIdentScheme;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -14,16 +14,30 @@ import it.unisa.dia.gas.plaf.jpbc.util.io.Base64;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.security.*;
+import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static Cryptography.ELGAMAL.ElGamal.encrypt;
+import com.sun.net.httpserver.HttpsServer;
+import com.sun.net.httpserver.HttpsConfigurator;
+import com.sun.net.httpserver.HttpsParameters;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
+
+import static Cryptography.ELGAMAL.ElGamal.elGamalEnc;
+
 
 public class HTTPServer {
     private static final HashMap<String, Boolean> verifiedEmails = new HashMap<>();
@@ -32,12 +46,47 @@ public class HTTPServer {
 
     public static void main(String[] args) {
         try {
-            HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-            IBEBasicIdentScheme ibeScheme = new IBEBasicIdentScheme();
-            verifiedEmails.put("tp_crypto_2024@outlook.com",true);
-            verifiedEmails.put("tp_crypto_2_2024@outlook.com",true);
+            HttpsServer httpsServer = HttpsServer.create(new InetSocketAddress(8000), 0);
+            SSLContext sslContext = SSLContext.getInstance("TLS");
 
-            server.createContext("/requestEmailVerification", exchange -> {
+// Initialize the keystore
+            char[] password = "Crypto2024".toCharArray(); // Keystore password
+            KeyStore ks = KeyStore.getInstance("JKS");
+            FileInputStream fis = new FileInputStream("mykeystore.jks");
+            ks.load(fis, password);
+
+// Set up the key manager factory
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(ks, password);
+
+// Set up the trust manager factory
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+            tmf.init(ks);
+
+// Initialize the SSL context
+            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
+
+            httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+                public void configure(HttpsParameters params) {
+                    try {
+                        // Initialise the SSL context
+                        SSLContext c = getSSLContext();
+                        SSLEngine engine = c.createSSLEngine();
+                        params.setNeedClientAuth(false);
+                        params.setCipherSuites(engine.getEnabledCipherSuites());
+                        params.setProtocols(engine.getEnabledProtocols());
+
+                        // Set the default SSL parameters
+                        SSLParameters defaultSSLParameters = c.getDefaultSSLParameters();
+                        params.setSSLParameters(defaultSSLParameters);
+                    } catch (Exception ex) {
+                        System.err.println("Failed to create HTTPS port");
+                    }
+                }
+            });
+            IBEBasicIdentScheme ibeScheme = new IBEBasicIdentScheme();
+
+            httpsServer.createContext("/requestEmailVerification", exchange -> {
                 String query = exchange.getRequestURI().getQuery();
                 String email = query != null && query.contains("=") ? query.split("=")[1] : "";
                 System.out.println(email);
@@ -55,7 +104,7 @@ public class HTTPServer {
                 }
             });
 
-            server.createContext("/verifyEmail", exchange -> {
+            httpsServer.createContext("/verifyEmail", exchange -> {
                 String query = exchange.getRequestURI().getQuery();
                 String token = query != null && query.contains("=") ? query.split("=")[1] : "";
                 System.out.println(token);
@@ -74,36 +123,43 @@ public class HTTPServer {
             });
 
 
-            server.createContext("/requestPrivateKey", exchange -> {
+            httpsServer.createContext("/requestPrivateKey", exchange -> {
                 String clientData = new String(exchange.getRequestBody().readAllBytes());
-                String[] parts = clientData.split("\n", 2);
+                String[] parts = clientData.split("\n", 3);
+                System.out.println(parts.length);
                 String clientEmail = parts[0];
 
                 if (verifiedEmails.getOrDefault(clientEmail, true)) {
+
                     PairingParameters pairingParams = PairingFactory.getPairingParameters("src/Parameters/curves/a.properties");
                     Pairing pairing = PairingFactory.getPairing(pairingParams);
 
                     String base64PublicKey = parts[1].trim();
                     byte[] publicKeyBytes = Base64.decode(base64PublicKey);
                     Element elGamalPublicKey = pairing.getG1().newElement();
-                    Element generator = pairing.getG1().newRandomElement();
-                    elGamalPublicKey.setFromBytes(publicKeyBytes);
+                    Element generator = pairing.getG1().newElement();
+                    System.out.println(parts[2].toString());
+                    System.out.println("naaan");
+                    generator.setFromBytes(Base64.decode(parts[2]));
+                    System.out.println("ouii");
 
+                    elGamalPublicKey.setFromBytes(publicKeyBytes);
                     System.out.println(clientEmail);
                     System.out.println("cle public elgamal "+elGamalPublicKey);
 
                     Element privateKeyIBE = ibeScheme.genererClePriveePourID(clientEmail);
                     System.out.println("clepv IBE "+ privateKeyIBE.toString());
                     //Chiffrement de la clé privée IBE avec la clé publique ElGamal de l'utilisateur
-                    CipherText encryptedPrivateKey = encrypt(privateKeyIBE, elGamalPublicKey, pairing, generator);
+                    ElgamalCipher encryptedPrivateKey = elGamalEnc(pairing, generator, privateKeyIBE, elGamalPublicKey);
+
 
                     // Récupération des paramètres publics du système IBE
                     Element[] PP = ibeScheme.Public_Parameters();
 
                     // Préparation de la réponse incluant la clé privée IBE chiffrée et les paramètres publics
-                    System.out.println(encryptedPrivateKey.u() + " " + encryptedPrivateKey.v());
-                    String responseStr = Base64.encodeBytes(encryptedPrivateKey.u().toBytes()) + "\n" +
-                            Base64.encodeBytes(encryptedPrivateKey.v().toBytes()) + "\n" +
+                    System.out.println(encryptedPrivateKey.getU() + " " + encryptedPrivateKey.getV());
+                    String responseStr = Base64.encodeBytes(encryptedPrivateKey.getU().toBytes()) + "\n" +
+                            Base64.encodeBytes(encryptedPrivateKey.getV().toBytes()) + "\n" +
                             Base64.encodeBytes(PP[0].toBytes()) + "\n" +
                             Base64.encodeBytes(PP[1].toBytes());
                     byte[] responseBytes = responseStr.getBytes();
@@ -120,10 +176,20 @@ public class HTTPServer {
                 }
             });
 
-            server.start();
+            httpsServer.start();
             System.out.println("Server is listening on port " );
         } catch (IOException e) {
             Logger.getLogger(HTTPServer.class.getName()).log(Level.SEVERE, null, e);
+        } catch (UnrecoverableKeyException e) {
+            throw new RuntimeException(e);
+        } catch (CertificateException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        } catch (KeyStoreException e) {
+            throw new RuntimeException(e);
+        } catch (KeyManagementException e) {
+            throw new RuntimeException(e);
         }
     }
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
@@ -160,7 +226,7 @@ public class HTTPServer {
         message.setFrom(new InternetAddress(senderEmail));
         message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipientEmail));
         message.setSubject("Email Verification");
-        String verificationLink = "http://localhost:8000/verifyEmail?token=" + token;
+        String verificationLink = "https://localhost:8000/verifyEmail?token=" + token;
         message.setContent("<h1>Email Verification</h1><p>Please click the link to verify your email: <a href=\"" + verificationLink + "\">Verify</a></p>", "text/html");
 
         Transport.send(message);

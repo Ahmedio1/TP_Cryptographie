@@ -1,4 +1,5 @@
 package Cryptography.IBE;
+
 import it.unisa.dia.gas.jpbc.Element;
 public class IBECipherText {
     protected Element U;

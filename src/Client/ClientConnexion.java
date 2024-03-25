@@ -1,7 +1,8 @@
 package Client;
 
 import Cryptography.ELGAMAL.ElGamal;
-import Cryptography.ELGAMAL.KeyPair;
+
+import Cryptography.ELGAMAL.PairKeys;
 import it.unisa.dia.gas.jpbc.Element;
 
 import java.io.IOException;
@@ -21,7 +22,7 @@ import java.util.Base64;
 public class ClientConnexion {
     protected String emailAddress;
     protected boolean connected;
-    protected KeyPair elGamalKeyPair;
+    protected PairKeys elGamalKeyPair;
     public ClientConnexion () {
         emailAddress = "";
         connected = false;
@@ -36,7 +37,7 @@ public class ClientConnexion {
         PairingParameters pairingParams = PairingFactory.getPairingParameters("src/params/curves/a.properties");
         Pairing pairing = PairingFactory.getPairing(pairingParams);
         Element generator = pairing.getZr().newRandomElement();
-        elGamalKeyPair = ElGamal.generateKeyPair(pairing, generator);
+        elGamalKeyPair = ElGamal.keygen(pairing, generator);
     }
     public void privateKeyRequest() {
         try {
@@ -49,7 +50,7 @@ public class ClientConnexion {
             OutputStream out = urlConn.getOutputStream();
 
             generateElGamalKeyPair();
-            Element publicKey = elGamalKeyPair.publicKey();
+            Element publicKey = elGamalKeyPair.getPubkey();
 
             // Encoder la clé publique en Base64 avant de l'envoyer
             byte[] publicKeyBytes = publicKey.toBytes();
