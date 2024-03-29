@@ -159,6 +159,7 @@ public class InboxGUI {
 
     private void displaySelectedMessage(int index) {
         try {
+            fichiersChiffresMap.clear();
             // Récupération du message sélectionné basé sur l'index.
             Message message = emailFolder.getMessage(index + 1);
 
@@ -208,7 +209,7 @@ public class InboxGUI {
                                 }
                             }
                         }
-// Traitement similaire pour les fichiers avec l'extension ".chiffre", en cherchant cette fois le fichier de propriétés associé.
+                        // Traitement similaire pour les fichiers avec l'extension ".chiffre", en cherchant cette fois le fichier de propriétés associé.
                         else if (attachFileName != null && attachFileName.endsWith(".chiffre")) {
                             String aesFileName = attachFileName.replace(".chiffre", ".properties");
                             for (int j = 0; j < multipart.getCount(); j++) {
@@ -225,7 +226,7 @@ public class InboxGUI {
                                 }
                             }
                         }
-// Gestion des pièces jointes non chiffrées.
+                        // Gestion des pièces jointes non chiffrées.
                         else {
 
                             // Affichage d'un label pour le nom de la pièce jointe non chiffrée.
@@ -282,7 +283,6 @@ public class InboxGUI {
                     // Utilise la clé privée et les informations du fichier pour déchiffrer la pièce jointe.
                     File decryptedFile = receiveMail.dechiffrerPieceJointe(fichierChiffre, fichierInfosAES, sk);
                     decryptedFiles.add(decryptedFile); // Ajoute le fichier déchiffré à la liste pour affichage.
-
                 }
 
 // Préparation de l'affichage des fichiers déchiffrés pour téléchargement ou ouverture.
