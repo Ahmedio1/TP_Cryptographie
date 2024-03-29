@@ -1,16 +1,14 @@
+package Client;
 // Importation des bibliothèques nécessaires
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
-import javax.crypto.spec.SecretKeySpec;
 import javax.mail.*;
 import javax.mail.internet.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Properties;
 
 import Cryptography.AES.AES;
@@ -45,7 +43,7 @@ public class MailClientGUI {
     // Initialisation de l'interface utilisateur
     private void initializeUI() {
         frame = new JFrame();
-        frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // Maximise la fenêtre
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setTitle("Client Mail");
 
@@ -137,7 +135,7 @@ public class MailClientGUI {
                 return new PasswordAuthentication(userEmail, userPassword);
             }
         });
-        System.out.println(userPassword);
+
         try {
             String AESkey = AES.randomString();
 

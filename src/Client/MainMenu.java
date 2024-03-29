@@ -1,3 +1,5 @@
+package Client;
+
 import it.unisa.dia.gas.jpbc.Element;
 
 import javax.swing.*;
